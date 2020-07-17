@@ -22,9 +22,10 @@ class ColorCamera(Camera):
 
     def _edit_frame(self, frame, frame_counter, **kwargs):
         # In (B, G, R)
-        average_color = np.mean(frame[kwargs['mask'] == 1], axis=0).astype(np.uint8)
-        print(average_color)
+        average_color = np.mean(frame[kwargs['mask'] == 1], axis=0)
 
         # Draw circle in center
         cv2.circle(frame, kwargs['center'], self.circle_radius, (0, 0, 255), 1)
+        # Draw colored square in corner
+        cv2.rectangle(frame, (0, 0), (100, 100), average_color, -1)
         return frame
