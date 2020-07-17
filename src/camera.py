@@ -7,9 +7,10 @@ class Camera:
         return {}
 
     # Use this function to edit the frame in the camera loop. Must return an np array of the same shape as frame
-    # if you override. Additional kwargs passed in by _calculate_before_hand
+    # and a dict with continued states if you override.
+    # Additional kwargs passed in by _calculate_before_hand and by the continued state.
     def _edit_frame(self, frame, frame_counter, **kwargs):
-        return frame
+        return frame, {}
 
     # Runs the camera loop.
     # frame_delay is the minimum amount of milliseconds between each frame.
@@ -19,8 +20,10 @@ class Camera:
 
         ret, frame = cap.read()
         cv2.imshow('frame', frame)
+        cv2.moveWindow('frame', 40, 30)
 
         additional_edit_args = self._calculate_before_hand(frame)
+        continued_state = {}
 
         # The loop to run the program
         frame_counter = 0
@@ -30,7 +33,7 @@ class Camera:
                 break
 
             # Edit the frame
-            frame = self._edit_frame(frame, frame_counter, **additional_edit_args)
+            frame, continued_state = self._edit_frame(frame, frame_counter, **additional_edit_args, **continued_state)
 
             # Show the frame'
             cv2.imshow('frame', frame)
