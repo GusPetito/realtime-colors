@@ -2,9 +2,13 @@ import cv2
 
 
 class Camera:
+    # Override this function to calculate values before the loop wit ha starting frame. Returns an object
+    def _calculate_before_hand(self, frame):
+        return {}
+
     # Use this function to edit the frame in the camera loop. Must return an np array of the same shape as frame
-    # if you override
-    def _edit_frame(self, frame, frame_counter):
+    # if you override. Additional kwargs passed in by _calculate_before_hand
+    def _edit_frame(self, frame, frame_counter, **kwargs):
         return frame
 
     # Runs the camera loop.
@@ -16,6 +20,8 @@ class Camera:
         ret, frame = cap.read()
         cv2.imshow('frame', frame)
 
+        additional_edit_args = self._calculate_before_hand(frame)
+
         # The loop to run the program
         frame_counter = 0
         while True:
@@ -24,7 +30,7 @@ class Camera:
                 break
 
             # Edit the frame
-            frame = self._edit_frame(frame, frame_counter)
+            frame = self._edit_frame(frame, frame_counter, **additional_edit_args)
 
             # Show the frame'
             cv2.imshow('frame', frame)
