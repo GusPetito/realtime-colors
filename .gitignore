@@ -2,3 +2,4 @@ __pycache__/
 venv/
 .idea/
 testing.py
+colors_full.py

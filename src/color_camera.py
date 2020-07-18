@@ -16,17 +16,10 @@ class ColorCamera(Camera):
         # Calculated beforehand
         self.curr_frame = None
         self.center = None
-        self.color_thread = None
+        self.average_color = (0,0,0)
 
-    # Returns the squared error when both colors are 3-length numpy arrays, to be used to find the closest color
-    def _squared_error(self, average_color, target_color):
-        return ((average_color - target_color)**2).mean()
-
-    def _squared_error_row(self, average_color, row):
-        # Switch from (R, G, B) to (B, G, R)
-        row = row.to_numpy()
-        row[3], row[5] = row[5], row[3]
-        return pd.Series(np.concatenate((row, [self._squared_error(average_color, row[3:])])))
+        # For help debugging, will create the average color box next to the real color box
+        self.debug_mode = False
 
     def _calculate_before_hand(self, frame):
         height, width, _channels = frame.shape
@@ -37,27 +30,30 @@ class ColorCamera(Camera):
         mask = np.zeros((height, width))
         cv2.circle(mask, self.center, self.circle_radius, 1, -1)
 
-        colors = pd.read_csv('res/colors.csv')
+        color_file = pd.read_csv('res/colors.csv', header=None)
+        color_file.columns = color_file.columns = ['comp_name', 'human_name', 'hex', 'r', 'g', 'b']
 
         # Set up a thread so the closest color can be calculated without stuttering the video
-        # Add a frame to the queue to start the calculation
-        # TODO: Maybe generate all colors beforehand
         def get_and_calculate_colors():
             exit_flag = threading.Event()
             while exit_flag:
+                exit_flag.wait(.25)
                 # In (B, G, R)
                 average_color = np.mean(self.curr_frame[mask == 1], axis=0)
-                errors = colors.apply(lambda row: self._squared_error_row(average_color, row), axis=1)
-                errors.columns = ['comp_name', 'human_name', 'hex', 'b', 'g', 'r', 'error']
-                closest_color = errors.iloc[errors['error'].idxmin()]
+                self.average_color = average_color
+                colors = np.array(color_file[['b', 'g', 'r']])
+                errors = np.sum((colors - average_color) ** 2, axis=1)
+                closest_color = color_file.loc[errors.argmin(), :]
                 self.closest_color_bgr = tuple(closest_color[['b', 'g', 'r']])
-                print(closest_color['human_name'], self.closest_color_bgr)
+                # Print the color name and the RGB value
+                print(f"{closest_color['human_name']} ({self.closest_color_bgr[2]}, {self.closest_color_bgr[1]}"
+                      f", {self.closest_color_bgr[0]})")
 
         color_thread = threading.Thread(target=get_and_calculate_colors, daemon=True)
         color_thread.start()
 
     def _edit_frame(self, frame, frame_counter, **kwargs):
-        self.curr_frame = frame
+        self.curr_frame = frame.copy()
 
         # Draw circle in center
         cv2.circle(frame, self.center, self.circle_radius, (0, 0, 255), 1)
@@ -65,4 +61,6 @@ class ColorCamera(Camera):
         cv2.rectangle(frame, (0, 0), (100, 100),
                       (int(self.closest_color_bgr[0]), int(self.closest_color_bgr[1]),
                        int(self.closest_color_bgr[2])), -1)
+        if self.debug_mode:
+            cv2.rectangle(frame, (100, 0), (200, 100), self.average_color, -1)
         return frame
