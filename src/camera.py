@@ -2,15 +2,14 @@ import cv2
 
 
 class Camera:
-    # Override this function to calculate values before the loop wit ha starting frame. Returns an object
+    # Override this function to calculate values before the loop with a starting frame.
     def _calculate_before_hand(self, frame):
-        return {}
+        pass
 
     # Use this function to edit the frame in the camera loop. Must return an np array of the same shape as frame
-    # and a dict with continued states if you override.
-    # Additional kwargs passed in by _calculate_before_hand and by the continued state.
+    # if you override.
     def _edit_frame(self, frame, frame_counter, **kwargs):
-        return frame, {}
+        return frame
 
     # Runs the camera loop.
     # frame_delay is the minimum amount of milliseconds between each frame.
@@ -22,8 +21,7 @@ class Camera:
         cv2.imshow('frame', frame)
         cv2.moveWindow('frame', 40, 30)
 
-        additional_edit_args = self._calculate_before_hand(frame)
-        continued_state = {}
+        self._calculate_before_hand(frame)
 
         # The loop to run the program
         frame_counter = 0
@@ -33,7 +31,7 @@ class Camera:
                 break
 
             # Edit the frame
-            frame, continued_state = self._edit_frame(frame, frame_counter, **additional_edit_args, **continued_state)
+            frame = self._edit_frame(frame, frame_counter)
 
             # Show the frame'
             cv2.imshow('frame', frame)
